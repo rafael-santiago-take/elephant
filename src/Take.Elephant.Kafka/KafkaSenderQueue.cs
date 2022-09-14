@@ -8,7 +8,7 @@ namespace Take.Elephant.Kafka
 {
     public class KafkaSenderQueue<T> : ISenderQueue<T>, IDisposable
     {
-        private readonly IEventStreamPublisher<Null, string> _producer;
+        private readonly IEventStreamPublisher<string, string> _producer = null;
         private readonly ISerializer<T> _serializer;
 
         public KafkaSenderQueue(string bootstrapServers, string topic, ISerializer<T> serializer)
@@ -37,25 +37,30 @@ namespace Take.Elephant.Kafka
         {
             Topic = topic;
             _serializer = serializer;
-            _producer = new KafkaEventStreamPublisher<Null, string>(producerConfig, topic, kafkaSerializer ?? new StringSerializer());
+            _producer = new KafkaEventStreamPublisher<string, string>(producerConfig, topic, kafkaSerializer ?? new StringSerializer());
         }
 
         public KafkaSenderQueue(
-            IProducer<Null, string> producer,
+            IProducer<string, string> producer,
             ISerializer<T> serializer,
             string topic)
         {
             _serializer = serializer;
             Topic = topic;
-            _producer = new KafkaEventStreamPublisher<Null, string>(producer, topic);
+            _producer = new KafkaEventStreamPublisher<string, string>(producer, topic);
         }
 
         public string Topic { get; }
 
         public virtual Task EnqueueAsync(T item, CancellationToken cancellationToken = default)
         {
+            return EnqueueAsync(null, item, cancellationToken);
+        }
+
+        public virtual Task EnqueueAsync(string key, T item, CancellationToken cancellationToken = default)
+        {
             var stringItem = _serializer.Serialize(item);
-            return _producer.PublishAsync(null, stringItem, cancellationToken);
+            return _producer.PublishAsync(key, stringItem, cancellationToken);
         }
 
         public void Dispose() => (_producer as IDisposable)?.Dispose();

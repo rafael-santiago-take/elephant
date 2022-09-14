@@ -1,6 +1,7 @@
 using Confluent.Kafka;
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Take.Elephant.Kafka;
 using Take.Elephant.Tests.Azure;
 using Xunit;
@@ -82,6 +83,20 @@ namespace Take.Elephant.Tests.Kafka
             _receiverQueue = receiverQueue;
 
             return (senderQueue, receiverQueue);
+        }
+
+        [Fact(DisplayName = nameof(EnqueueNewItemWhitPartitionSucceeds))]
+        public virtual async Task EnqueueNewItemWhitPartitionSucceeds()
+        {
+            // Arrange
+            var (senderQueue, receiverQueue) = Create();
+            var item = CreateItem();
+
+            // Act
+            await (senderQueue as KafkaSenderQueue<Item>).EnqueueAsync("partition1",item, CancellationToken);
+
+            // Assert
+            AssertEquals(await receiverQueue.DequeueAsync(CancellationToken), item);
         }
 
         protected override void Dispose(bool disposing)
